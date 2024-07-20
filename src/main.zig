@@ -12,6 +12,7 @@ pub fn main() !void {
     const params = comptime clap.parseParamsComptime(
         \\-h,   --help                      Display this help and exit.
         \\      --skip-empty-values         Whether to skip empty values.  
+        \\      --pretty-print              Whether to pretty print with indendation.
         \\<FILE>...                         Files to parse.
         \\
     );
@@ -44,6 +45,12 @@ pub fn main() !void {
     var options = lib.ParserOptions{};
     options.skip_empty_values = @field(res.args, "skip-empty-values") > 0;
 
+    var stringifyOptions: std.json.StringifyOptions = .{ .whitespace = .minified };
+
+    if (@field(res.args, "pretty-print") > 0) {
+        stringifyOptions.whitespace = .indent_4;
+    }
+
     for (res.positionals) |filePath| {
         const file = try std.fs.cwd().openFile(filePath, .{ .mode = .read_only, .lock = .exclusive });
         defer file.close();
@@ -55,7 +62,7 @@ pub fn main() !void {
         var parser = lib.Parser.init(allocator, bytes, options);
         const object = try parser.parse();
 
-        const json = try std.json.stringifyAlloc(allocator, object, .{ .whitespace = .indent_4 });
+        const json = try std.json.stringifyAlloc(allocator, object, stringifyOptions);
         defer allocator.free(json);
 
         _ = try stdOut.write(json);
