@@ -38,6 +38,41 @@ pub fn main() !void {
     _ = try stdOut.write(json);
 }
 
+pub const ArrayIterator = struct {
+    object: Object,
+    index: usize = 0,
+    previous: ?usize = null,
+
+    pub fn next(self: *@This()) ?Object {
+        defer self.index += 1;
+        for (self.object.members.items[self.index..]) |current| {
+            return switch (current.value) {
+                .object => |object| {
+                    var required: usize = 0;
+                    if (self.previous) |previousKey| {
+                        required = previousKey + 1;
+                    }
+
+                    const parsedKey = std.fmt.parseUnsigned(usize, object.key, 0);
+                    if (parsedKey) |key| {
+                        if (key != required) {
+                            return null;
+                        }
+
+                        self.previous = key;
+                        return object;
+                    } else |_| {
+                        return null;
+                    }
+                },
+                .string => return null,
+            };
+        }
+
+        return null;
+    }
+};
+
 pub const Object = struct {
     key: []const u8,
     members: Members,
@@ -47,6 +82,10 @@ pub const Object = struct {
         try jw.objectField(self.key);
         try writeMembers(self.members, jw);
         try jw.endObject();
+    }
+
+    pub fn arrayIterator(self: @This()) ArrayIterator {
+        return .{ .object = self };
     }
 };
 
@@ -208,7 +247,7 @@ pub const Parser = struct {
             const string = try self.parseString();
             try self.expectEoL();
 
-            if (string.len == 0) {
+            if (string.len == 0 and self.options.skip_empty_values) {
                 return null;
             }
 
@@ -333,4 +372,19 @@ test "parsing" {
     ;
 
     try std.testing.expectEqualStrings(expected, json);
+
+    var buffer = [_]u8{0} ** 10;
+    var stream = std.io.fixedBufferStream(&buffer);
+
+    var i: usize = 0;
+    var iterator = object.arrayIterator();
+    while (iterator.next()) |obj| {
+        try std.fmt.format(stream.writer(), "{d}", .{i});
+        i += 1;
+
+        try std.testing.expectEqualStrings(stream.getWritten(), obj.key);
+        stream.reset();
+    }
+
+    try std.testing.expectEqual(2, i);
 }
