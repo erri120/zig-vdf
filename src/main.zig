@@ -26,7 +26,7 @@ pub fn main() !void {
     const bytes = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(bytes);
 
-    var parser = Parser.init(allocator, bytes);
+    var parser = Parser.init(allocator, bytes, null);
     const object = try parser.parse();
 
     const json = try std.json.stringifyAlloc(allocator, object, .{ .whitespace = .indent_4 });
@@ -94,16 +94,21 @@ pub const KeyValuePair = struct {
     value: Value,
 };
 
+pub const ParserOptions = struct {
+    skip_empty_values: bool = false,
+};
+
 pub const Parser = struct {
     allocator: std.mem.Allocator,
     bytes: []const u8,
     pos: usize = 0,
+    options: ParserOptions,
 
     const Self = @This();
     const Error = error{ EndOfFile, UnexpectedByte, ExpectedEoL } || std.mem.Allocator.Error;
 
-    pub fn init(allocator: std.mem.Allocator, bytes: []const u8) Self {
-        return .{ .allocator = allocator, .bytes = bytes };
+    pub fn init(allocator: std.mem.Allocator, bytes: []const u8, options: ?ParserOptions) Self {
+        return .{ .allocator = allocator, .bytes = bytes, .options = options orelse ParserOptions{} };
     }
 
     fn peek(self: *Self) Error!u8 {
@@ -190,7 +195,7 @@ pub const Parser = struct {
         }
     }
 
-    fn parseKeyValuePair(self: *Self, depth: u16) Error!KeyValuePair {
+    fn parseKeyValuePair(self: *Self, depth: u16) Error!?KeyValuePair {
         try self.expectNesting(depth);
 
         const key = try self.parseString();
@@ -201,8 +206,11 @@ pub const Parser = struct {
             try self.expect('\t');
 
             const string = try self.parseString();
-
             try self.expectEoL();
+
+            if (string.len == 0) {
+                return null;
+            }
 
             return .{ .key = key, .value = Value{ .string = string } };
         }
@@ -232,7 +240,11 @@ pub const Parser = struct {
             }
 
             const pair = try self.parseKeyValuePair(depth + 1);
-            try members.append(pair);
+            if (pair) |actualPair| {
+                try members.append(actualPair);
+            } else {
+                continue;
+            }
         }
 
         try self.expectClose(depth);
@@ -273,7 +285,7 @@ test "parsing" {
     const bytes = try testFile.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(bytes);
 
-    var parser = Parser.init(allocator, bytes);
+    var parser = Parser.init(allocator, bytes, null);
     const object = try parser.parse();
 
     const json = try std.json.stringifyAlloc(allocator, object, .{ .whitespace = .indent_4 });
