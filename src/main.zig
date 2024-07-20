@@ -21,7 +21,7 @@ pub fn main() !void {
         return;
     }
 
-    const file = try std.fs.openFileAbsolute(filePath.?, .{ .mode = .read_only, .lock = .exclusive });
+    const file = try std.fs.cwd().openFile(filePath.?, .{ .mode = .read_only, .lock = .exclusive });
     defer file.close();
 
     const bytes = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
