@@ -1,6 +1,6 @@
 # VDF Parser
 
-Parser for Steam's VDF text files:
+Parser for Steam's VDF/ACF text files:
 
 ```
 "libraryfolders"
@@ -31,7 +31,7 @@ Parser for Steam's VDF text files:
 
 ### CLI
 
-The program `vdf` converts VDF files into JSON:
+The program `vdf` converts VDF/ACF files into JSON:
 
 ```json
 {
