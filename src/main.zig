@@ -24,7 +24,8 @@ pub fn main() !void {
     const file = try std.fs.cwd().openFile(filePath.?, .{ .mode = .read_only, .lock = .exclusive });
     defer file.close();
 
-    const bytes = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+    const maxSize: usize = 52_428_800; // 50 MB
+    const bytes = try file.readToEndAlloc(allocator, maxSize);
     defer allocator.free(bytes);
 
     var parser = lib.Parser.init(allocator, bytes, null);

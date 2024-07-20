@@ -279,7 +279,7 @@ test "parsing" {
     var testFile = try testFilesDir.openFile("libraryfolders.vdf", .{});
     defer testFile.close();
 
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
