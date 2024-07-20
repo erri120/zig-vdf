@@ -59,7 +59,26 @@ The program `vdf` converts VDF/ACF files into JSON:
 
 ### Library
 
-TODO
+```bash
+zig fetch --save https://github.com/erri120/zig-vdf/archive/refs/heads/main.tar.gz
+```
+
+In your `build.zig` file:
+
+```zig
+const vdf = b.dependency("vdf", .{
+    .target = target,
+    .optimize = optimize,
+});
+
+lib.root_module.addImport("vdf", vdf.module("vdf"));
+```
+
+The module can now be imported:
+
+```zig
+const vdf = @import("vdf");
+```
 
 ## License
 
