@@ -1,5 +1,5 @@
 const std = @import("std");
-const lib = @import("./parser.zig");
+const vdf = @import("vdf");
 const clap = @import("clap");
 
 pub fn main() !void {
@@ -42,7 +42,7 @@ pub fn main() !void {
         return clap.help(stdErr.writer(), clap.Help, &params, .{});
     }
 
-    var options = lib.ParserOptions{};
+    var options = vdf.ParserOptions{};
     options.skip_empty_values = @field(res.args, "skip-empty-values") > 0;
 
     var stringifyOptions: std.json.StringifyOptions = .{ .whitespace = .minified };
@@ -59,7 +59,7 @@ pub fn main() !void {
         const bytes = try file.readToEndAlloc(allocator, maxSize);
         defer allocator.free(bytes);
 
-        var parser = lib.Parser.init(allocator, bytes, options);
+        var parser = vdf.Parser.init(allocator, bytes, options);
         const object = try parser.parse();
 
         const json = try std.json.stringifyAlloc(allocator, object, stringifyOptions);
